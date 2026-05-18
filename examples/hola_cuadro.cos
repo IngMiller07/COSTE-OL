@@ -1,0 +1,17 @@
+// =============================================================
+//  hola_cuadro.cos — Primer programa en Costeñol
+//  "El 'Hola Mundo' del Malecón"
+// =============================================================
+
+// Declaración de variables
+nombre Texto;
+edad Entero;
+
+// Asignaciones directas
+nombre = "Alejandra";
+edad = 21;
+
+// Salida de mensajes
+Mensaje.Texto("¡Hola, cuadro! Bienvenido a Costeñol.");
+Mensaje.Texto(nombre);
+Mensaje.Texto("Calidad de programa, bacano.");

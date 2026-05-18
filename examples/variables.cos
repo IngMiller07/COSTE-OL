@@ -1,0 +1,26 @@
+// =============================================================
+//  variables.cos — Demostración de tipos y captura
+//  Demuestra todos los tipos de dato de Costeñol
+// =============================================================
+
+// Declaración de todos los tipos
+nombre Texto;
+edad Entero;
+altura Real;
+activo Logico;
+
+// Captura de datos del usuario
+nombre = Captura.Texto();
+edad = Captura.Entero();
+altura = Captura.Real();
+
+// Asignación de booleano
+activo = verdadero;
+
+// Mostrar resultados
+Mensaje.Texto("=== Datos del usuario ===");
+Mensaje.Texto(nombre);
+Mensaje.Texto(edad);
+Mensaje.Texto(altura);
+Mensaje.Texto(activo);
+Mensaje.Texto("¡Calidad, cuadro! Todos los tipos funcionan.");

@@ -1,0 +1,29 @@
+// =============================================================
+//  calculadora.cos — Calculadora básica en Costeñol
+//  Demuestra: declaración, asignación y operaciones aritméticas
+// =============================================================
+
+// Declaración de variables
+num1 Entero;
+num2 Entero;
+suma Entero;
+producto Entero;
+pi Real;
+resultado Real;
+
+// Asignaciones
+num1 = 10;
+num2 = 5;
+pi = 3.1416;
+
+// Operaciones aritméticas
+suma = num1 + num2;
+producto = num1 * num2;
+resultado = pi * 2;
+
+// Salida de resultados
+Mensaje.Texto("=== Calculadora Costeñola ===");
+Mensaje.Texto(suma);
+Mensaje.Texto(producto);
+Mensaje.Texto(resultado);
+Mensaje.Texto("¡Bacano! Las matemáticas son chéveres.");
