@@ -1,16 +1,16 @@
-# 🌊 Compilador Costeñol — Guía de Sustentación del Malecón
+# 🌊 Compilador Costeñol — Documentación del Proyecto
 
 > *"¡Ajá, cuadro! Bienvenidos al compilador del Malecón. Sin chicharrones y con toda la sabrosura de Barranquilla."*
 
-Este proyecto es un **Compilador e Intérprete Académico** diseñado para el lenguaje **Costeñol**, un dialecto inspirado en la jerga costeña del Caribe colombiano. Ha sido construido utilizando **Python** y la biblioteca **SLY (Sly Lex Yacc)**.
+Este proyecto es un **Compilador e Intérprete Académico** desarrollado para el lenguaje **Costeñol**, un dialecto inspirado en la jerga costeña del Caribe colombiano. Ha sido construido utilizando **Python** y la biblioteca **SLY (Sly Lex Yacc)**.
 
-Esta guía está redactada con el rigor teórico necesario para la sustentación ante el jurado/docente, junto con la correspondencia de términos en nuestro dialecto.
+Este documento detalla la arquitectura del sistema, las especificaciones técnicas del lenguaje y el flujo de procesamiento de sus componentes internos.
 
 ---
 
 ## 🏛️ 1. Arquitectura y Fases del Compilador
 
-El compilador sigue una arquitectura clásica de **compilación de una sola pasada con ejecución directa sobre el Árbol de Sintaxis Abstracta (Tree-Walking Interpreter)**.
+El sistema sigue una arquitectura clásica de **compilación de una sola pasada con ejecución directa sobre el Árbol de Sintaxis Abstracta (Tree-Walking Interpreter)**.
 
 ```mermaid
 graph TD
@@ -26,7 +26,7 @@ graph TD
 ### 📋 Cuadro de Equivalencias Técnicas
 | Término Académico | Nombre Costeño | Ubicación de Código | Función Principal |
 | :--- | :--- | :--- | :--- |
-| **Preprocesamiento** | *Fase Cero* | `src/compiler_api.py` | Normaliza el código (comillas) e interpreta plantillas. |
+| **Preprocesamiento** | *Fase Cero* | `src/compiler_api.py` | Normaliza comillas y traduce plantillas de salida. |
 | **Analizador Léxico** | *Lexer del Malecón* | `src/lexer.py` | Convierte la cadena de caracteres en un flujo de tokens. |
 | **Analizador Sintáctico** | *Parser Bacano* | `src/parser.py` | Valida la gramática y estructura el AST jerárquico. |
 | **Tabla de Símbolos** | *Tabla e' Vainas* | `src/symbol_table.py` | Almacena y gestiona variables, sus tipos y valores. |
@@ -39,12 +39,12 @@ graph TD
 
 ### 🔹 Fase 0: Preprocesador (`src/compiler_api.py`)
 Antes de iniciar el análisis léxico, el código fuente pasa por una fase de normalización estética:
-1. **Normalización de Comillas**: Convierte comillas tipográficas curvas (`“`, `”`) a comillas rectas (`"`). Evita que procesadores de texto (como Word o Teams) dañen la compilación.
+1. **Normalización de Comillas**: Convierte comillas tipográficas curvas (`“`, `”`) a comillas rectas (`"`). Esto previene errores provocados al copiar y pegar código desde procesadores de texto.
 2. **Traducción de Plantillas**: Traduce expresiones de interpolación especial como `Mensaje.Texto(El resultado es:"sum");` a una concatenación explícita válida: `Mensaje.Texto("El resultado es:" + sum);`. Esto evita ambigüedades en el Parser.
 
 ### 🔤 Fase 1: Analizador Léxico (`src/lexer.py`)
 Implementado con `sly.Lexer`. Define las expresiones regulares para los terminales del lenguaje:
-* **Palabras Clave**: `Entero`, `Texto`, `Real`, `Logico` (tipos), `Captura`, `Mensaje`.
+* **Palabras Clave**: `Entero`, `Texto`, `Real`, `Logico` (tipos de datos), `Captura`, `Mensaje`.
 * **Booleanos**: `verdadero`, `falso`.
 * **Delimitadores y Operadores**: `+`, `-`, `*`, `/`, `^`, `=`, `;`, `.`, `(`, `)`.
 * **Ignorados**: Los comentarios con `//` y los espacios en blanco se descartan automáticamente para no ensuciar el flujo de tokens.
@@ -69,9 +69,9 @@ Es un **Intérprete de Árbol (Tree-Walking)**.
 
 ---
 
-## 🧪 3. Análisis Paso a Paso del Caso de Prueba del Docente
+## 🧪 3. Análisis de Ejecución Paso a Paso
 
-El docente evaluará el compilador utilizando el siguiente bloque de código:
+A continuación se analiza el procesamiento de un programa característico que incluye captura interactiva, operaciones aritméticas, uso de plantillas y recuperación ante errores sintácticos:
 
 ```text
 num1 Entero;
@@ -82,11 +82,11 @@ sum=num1+num2);
 Mensaje.Texto(El resultado es:”sum”);
 ```
 
-Así es como reacciona internamente el compilador al presionar **Compilar y Ejecutar**:
+Así es como reacciona internamente el compilador al ejecutar este bloque de código:
 
 ```mermaid
 chronological
-    title Línea por Línea - Ejecución del Caso de Prueba
+    title Línea por Línea - Ejecución del Programa
     Líneas 1 y 2 : Declaración de variables num1 y num2 como Entero.
     Línea 3 : Captura de Texto sobre variable Entero. Semántico emite Advertencia de tipo.
     Línea 4 : Captura de Entero sobre variable Entero. Semántica correcta.
@@ -106,7 +106,7 @@ chronological
      > `⚠️ 'num1' es Entero pero Captura.Texto() captura un Texto (línea 3). Costeñol intentará convertir, cuadro.`
    * **Ejecución**: El motor solicita el dato. Si el usuario ingresa `"10"`, el intérprete lo recibe como texto y lo convierte internamente a `int` (`10`) antes de escribirlo en la Tabla de Símbolos, manteniendo la coherencia de tipos.
 
-3. **`sum=num1+num2);` (Línea 5 — Con error)**
+3. **`sum=num1+num2);` (Línea 5 — Manejo de Errores)**
    * **El Error Sintáctico**: Contiene un paréntesis de cierre `)` huérfano.
    * **Recuperación**: El parser detecta que la estructura no corresponde a una asignación válida, lanza un error amigable, y gracias a `errok()` ignora el token inesperado y se desplaza al siguiente punto y coma para continuar el programa sin colapsar.
    * **Error Reportado**:
@@ -122,7 +122,7 @@ chronological
 
 ---
 
-## 🚀 4. Guía de Inicio Rápido y Demostración
+## 🚀 4. Guía de Ejecución
 
 ### 📥 1. Instalación de Dependencias
 Asegúrate de contar con Python 3.8+ instalado y ejecuta:
@@ -146,15 +146,15 @@ Si deseas presentar la IDE en un navegador web (interfaz premium responsiva):
    ```
 3. Abre tu navegador en: **`http://localhost:5000`**
 
-### 🧪 4. Ejecutar el Script de Sustentación Directo
-Si quieres hacer una demostración limpia por terminal donde el compilador procesa consecutivamente el código con errores del docente y luego su variante corregida (inyectando respuestas automáticas):
+### 🧪 4. Ejecutar el Script de Prueba Directo
+Si quieres hacer una demostración limpia por terminal donde el compilador procesa consecutivamente el código con errores y luego su variante corregida (inyectando respuestas automáticas):
 ```bash
 py test_docente.py
 ```
 
 ---
 
-## 🌴 5. Glosario de Mensajes Costeños en Compilación
+## 🌴 5. Glosario de Mensajes y Dialecto
 El compilador está diseñado para dar feedback técnico utilizando localismos amigables del Caribe:
 
 *   `Barro, cuadro... el programa terminó de forma inesperada`: Error fatal al final del archivo (EOF abrupto).
