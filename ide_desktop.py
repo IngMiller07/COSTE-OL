@@ -4,7 +4,7 @@
 #  Uso: py ide_desktop.py
 # =============================================================
 import sys, os, io, tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter import ttk, filedialog, messagebox, scrolledtext, simpledialog
 from tkinter import font as tkfont
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
@@ -26,6 +26,17 @@ TEXT     = '#cdd6f4'
 MUTED    = '#6c7086'
 
 KEYWORDS  = ('Entero','Texto','Real','Logico','Captura','Mensaje','verdadero','falso')
+
+# ── Código del docente (precargado para la sustentación) ─────
+CODIGO_DOCENTE = """\
+// Código de prueba del docente — Sustentación Compiladores
+num1 Entero;
+num2 Entero;
+num1=Captura.Texto();
+num2=Captura.Entero();
+sum=num1+num2);
+Mensaje.Texto(El resultado es:"sum");
+"""
 
 
 class CosteñolIDE(tk.Tk):
@@ -78,13 +89,6 @@ class CosteñolIDE(tk.Tk):
         tk.Button(bar, text='Abrir',   command=self.abrir,   **btn_cfg).pack(side='right', padx=2, pady=6)
         tk.Button(bar, text='Nuevo',   command=self.nuevo,   **btn_cfg).pack(side='right', padx=2, pady=6)
 
-        # Modo arrebatao
-        self.arrebatao = tk.BooleanVar(value=False)
-        tk.Checkbutton(bar, text='🔥 Modo Arrebatao', variable=self.arrebatao,
-                       bg=BG2, fg=MUTED, selectcolor=BG2, activebackground=BG2,
-                       activeforeground=ACCENT, font=self.font_ui,
-                       cursor='hand2').pack(side='right', padx=8)
-
     def _build_main(self):
         paned = tk.PanedWindow(self, orient='horizontal', bg=BORDER,
                                sashwidth=4, sashrelief='flat')
@@ -114,7 +118,7 @@ class CosteñolIDE(tk.Tk):
         ed_frame = tk.Frame(left, bg=BG)
         ed_frame.pack(side='left', fill='both', expand=True)
 
-        tk.Label(ed_frame, text=' EDITOR  ·  Costeñol', bg=BG3, fg=MUTED,
+        tk.Label(ed_frame, text=' EDITOR  ·  Costeñol (.cos)', bg=BG3, fg=MUTED,
                  anchor='w', font=tkfont.Font(family='Segoe UI', size=9),
                  pady=4).pack(fill='x')
 
@@ -152,7 +156,7 @@ class CosteñolIDE(tk.Tk):
         right = tk.Frame(paned, bg=BG)
         paned.add(right, minsize=340)
 
-        # Indicadores de fases
+        # Indicadores de fases del compilador
         fases_frame = tk.Frame(right, bg=BG2, pady=6)
         fases_frame.pack(fill='x')
         self.fase_dots = {}
@@ -203,7 +207,7 @@ class CosteñolIDE(tk.Tk):
                             ('info',BLUE),('banner',CYAN),('muted',MUTED),('accent',ACCENT)]:
             self.consola.tag_config(tag, foreground=color)
 
-        # Tab Tabla
+        # Tab Tabla de Símbolos
         tab_tab = tk.Frame(nb, bg=BG)
         nb.add(tab_tab, text="📋 Tabla e' Vainas")
         cols = ('Nombre','Tipo','Valor','Línea')
@@ -231,6 +235,16 @@ class CosteñolIDE(tk.Tk):
         self.tok_text.tag_config('valor', foreground=TEXT)
         self.tok_text.tag_config('linea', foreground=MUTED)
         self.tok_text.tag_config('num',   foreground=BORDER)
+
+        # Tab AST
+        tab_ast = tk.Frame(nb, bg=BG)
+        nb.add(tab_ast, text='🌳 AST')
+        self.ast_text = scrolledtext.ScrolledText(tab_ast, bg=BG, fg=TEXT,
+                                                   font=self.font_out, bd=0,
+                                                   padx=10, pady=8, state='disabled')
+        self.ast_text.pack(fill='both', expand=True)
+        self.ast_text.tag_config('node',  foreground=ACCENT)
+        self.ast_text.tag_config('muted', foreground=MUTED)
 
     def _build_statusbar(self):
         bar = tk.Frame(self, bg=BG2, height=24)
@@ -282,7 +296,7 @@ class CosteñolIDE(tk.Tk):
         for m in re.finditer(r'\b\d+\.?\d*\b', content):
             self.editor.tag_add('number', f'1.0+{m.start()}c', f'1.0+{m.end()}c')
         # Paréntesis/puntuación
-        for m in re.finditer(r'[()\.;=]', content):
+        for m in re.finditer(r'[()\.;=:]', content):
             self.editor.tag_add('paren', f'1.0+{m.start()}c', f'1.0+{m.end()}c')
 
     def _on_key(self, event=None):
@@ -348,7 +362,6 @@ class CosteñolIDE(tk.Tk):
     # ── COMPILAR ──────────────────────────────────────────────
     def compilar(self):
         codigo = self.editor.get('1.0', 'end').strip()
-        arrebatao = self.arrebatao.get()
 
         self.btn_run.config(text='⏳ Compilando...', state='disabled')
         self.update()
@@ -356,8 +369,18 @@ class CosteñolIDE(tk.Tk):
         self._reset_fases()
         self._limpiar_consola()
 
+        # Función interactiva de captura para el IDE
+        def tk_input(prompt):
+            clean_prompt = prompt.replace("📥", "").strip()
+            # Mostrar diálogo modal al usuario
+            valor = simpledialog.askstring("Entrada Costeña 📥", clean_prompt, parent=self)
+            if valor is None:
+                raise EOFError()
+            self._escribir(f"{prompt} {valor}\n", "info")
+            return valor
+
         try:
-            data = compilar_codigo(codigo, arrebatao)
+            data = compilar_codigo(codigo, fn_input=tk_input)
         except Exception as e:
             self._escribir('❌ Error interno: ' + str(e) + '\n', 'err')
             self.btn_run.config(text='▶  Compilar y Ejecutar', state='normal')
@@ -367,9 +390,7 @@ class CosteñolIDE(tk.Tk):
         self.btn_run.config(text='▶  Compilar y Ejecutar', state='normal')
 
     def _mostrar_resultado(self, data):
-        # Fases
-        fases_map = {'lexer':'lexer','parser':'parser',
-                     'semantico':'semantico','ejecutor':'ejecutor'}
+        # Actualizar indicadores de fases
         for k, v in (data.get('fases') or {}).items():
             dot = self.fase_dots.get(k)
             msg = self.fase_msgs.get(k)
@@ -380,28 +401,31 @@ class CosteñolIDE(tk.Tk):
 
         # Consola
         self._escribir('═' * 45 + '\n', 'muted')
-        self._escribir(' 🌊  COSTEÑOL — Resultado\n', 'banner')
+        self._escribir(' 🌊  COSTEÑOL — Resultado de Compilación\n', 'banner')
         self._escribir('═' * 45 + '\n', 'muted')
 
+        # Advertencias
         if data.get('advertencias'):
+            self._escribir('\n── ADVERTENCIAS ──\n', 'warn')
             for a in data['advertencias']:
-                self._escribir('⚠️  ' + a + '\n', 'warn')
+                self._escribir(a + '\n', 'warn')
 
+        # Errores
         if data.get('errores'):
-            self._escribir('\n── CHICHARRONES ──\n', 'warn')
+            self._escribir('\n── CHICHARRONES (ERRORES) ──\n', 'err')
             for e in data['errores']:
                 self._escribir(e + '\n', 'err')
 
+        # Salida del programa
         if data.get('salida'):
-            self._escribir('\n── SALIDA ──\n', 'info')
+            self._escribir('\n── SALIDA DEL PROGRAMA ──\n', 'info')
             for linea in data['salida']:
-                tag = 'accent' if '[Arrebatao]' in linea else 'ok'
-                self._escribir(linea + '\n', tag)
+                self._escribir(linea + '\n', 'ok')
 
         self._escribir('\n', 'muted')
         if data.get('success'):
             self._escribir('🎉 ¡Bacano! El código corrió sin chicharrones. 🌴\n', 'ok')
-            self.st_status.config(text='✅ Compilado', fg=GREEN)
+            self.st_status.config(text='✅ Compilado OK', fg=GREEN)
         else:
             self._escribir('💥 Hay chicharrones. Revisa los errores arriba.\n', 'err')
             self.st_status.config(text='❌ Con errores', fg=RED)
@@ -413,7 +437,7 @@ class CosteñolIDE(tk.Tk):
         self.st_errores.config(text=f'{n_err} error(es)',
                                fg=RED if n_err > 0 else GREEN)
 
-        # Tabla
+        # Tabla de símbolos
         for row in self.tabla_tree.get_children():
             self.tabla_tree.delete(row)
         for fila in data.get('tabla', []):
@@ -429,6 +453,17 @@ class CosteñolIDE(tk.Tk):
             self.tok_text.insert('end', f'{t["valor"]:<20}', 'valor')
             self.tok_text.insert('end', f':{t["linea"]}\n', 'linea')
         self.tok_text.config(state='disabled')
+
+        # AST (nodos generados)
+        self.ast_text.config(state='normal')
+        self.ast_text.delete('1.0', 'end')
+        n = data.get('ast_count', 0)
+        self.ast_text.insert('end', f'Total de nodos en el AST: {n}\n\n', 'muted')
+        self.ast_text.insert('end',
+            'El AST (Árbol Sintáctico Abstracto) representa\n'
+            'la estructura jerárquica del programa.\n'
+            'Cada nodo es una instrucción o expresión.\n', 'muted')
+        self.ast_text.config(state='disabled')
 
     def _limpiar_consola(self):
         self.consola.config(state='normal')
@@ -449,21 +484,29 @@ class CosteñolIDE(tk.Tk):
 
     # ── EJEMPLOS ─────────────────────────────────────────────
     def _cargar_ejemplo_bienvenida(self):
-        _, codigo = self._ejemplos()[0]
-        self.editor.insert('1.0', codigo)
+        """Precarga el código del docente al arrancar."""
+        self.editor.insert('1.0', CODIGO_DOCENTE)
+        self.st_file.config(text='docente_prueba.cos')
         self._on_key()
 
     def _ejemplos(self):
+        """
+        Retorna lista de (nombre, codigo) para el panel lateral.
+        Primero el código del docente, luego los ejemplos del directorio.
+        """
+        lista = [('docente_prueba', CODIGO_DOCENTE)]
         base = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'examples')
-        ejemplos = []
         if os.path.isdir(base):
             for f in sorted(os.listdir(base)):
                 if f.endswith('.cos'):
                     with open(os.path.join(base, f), 'r', encoding='utf-8') as fh:
-                        ejemplos.append((f.replace('.cos',''), fh.read()))
-        if not ejemplos:
-            ejemplos = [('hola_cuadro', '// Hola cuadro!\nnombre Texto;\nnombre = "Bacano";\nMensaje.Texto(nombre);\n')]
-        return ejemplos
+                        lista.append((f.replace('.cos',''), fh.read()))
+        if len(lista) == 1:
+            # Fallback por si no hay ejemplos
+            lista.append(('hola_cuadro',
+                '// Hola cuadro!\nnombre Texto;\nnombre = "Bacano";\n'
+                'Mensaje.Texto(nombre);\n'))
+        return lista
 
 
 if __name__ == '__main__':

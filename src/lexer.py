@@ -49,8 +49,8 @@ class LexerMalecon(Lexer):
         NUMERO_REAL,       # Ej: 3.14, 2.5
         NUMERO_ENTERO,     # Ej: 42, 100
         CADENA,            # Ej: "Hola cuadro"
-        VERDADERO,         # true
-        FALSO,             # false
+        VERDADERO,         # verdadero
+        FALSO,             # falso
 
         # Identificadores y palabras clave de acción
         ID,                # Nombres de variables: num1, nombre, x
@@ -90,8 +90,6 @@ class LexerMalecon(Lexer):
     # ----------------------------------------------------------
     # IGNORADOS
     # Caracteres que el lexer debe saltar sin generar token.
-    # Los espacios, tabs y retornos de carro no tienen significado
-    # sintáctico en Costeñol, así que los ignoramos.
     # ----------------------------------------------------------
     ignore = ' \t\r'
 
@@ -141,10 +139,6 @@ class LexerMalecon(Lexer):
 
     # ----------------------------------------------------------
     # TOKENS CON LÓGICA ESPECIAL (métodos @_)
-    # Usamos métodos cuando un token necesita:
-    #   - Lógica adicional (ej: convertir a int/float)
-    #   - Distinguir palabras reservadas de identificadores
-    #   - Manejar caracteres especiales dentro del patrón
     # ----------------------------------------------------------
 
     @_(r'\d+\.\d+')
@@ -232,9 +226,6 @@ class LexerMalecon(Lexer):
 
     # ----------------------------------------------------------
     # MANEJO DE ERRORES LÉXICOS
-    # Cuando el lexer encuentra un carácter que no reconoce,
-    # llama a este método. Aquí mostramos un mensaje costeño
-    # y avanzamos un carácter para no quedar en bucle infinito.
     # ----------------------------------------------------------
     def error(self, t):
         """

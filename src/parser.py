@@ -185,6 +185,10 @@ class ParserBacano(Parser):
     #  Sintaxis: Mensaje . Texto ( expresion ) ;
     #  Ejemplo:  Mensaje.Texto("Hola cuadro");
     #            Mensaje.Texto(nombre);
+    #            Mensaje.Texto(suma);
+    #
+    #  NOTA: La sintaxis template (El resultado es:"sum") se
+    #  pre-procesa antes de llegar al parser. Ver compiler_api.py.
     # ==========================================================
 
     @_('MENSAJE PUNTO TEXTO LPAREN expresion RPAREN PUNTO_COMA')
@@ -306,15 +310,27 @@ class ParserBacano(Parser):
         """
         Detector de chicharrones sintácticos.
         Reporta errores de sintaxis con mensaje costeño.
+        Solo reporta un error por línea para no spamear.
         """
         if t:
-            msg = (f"  🚨 Cule chicharrón sintáctico en la línea {t.lineno}: "
-                   f"ese token '{t.value}' no pega ahí, cuadro.")
-            self.errores.append(msg)
-            print(msg)
-            # Recuperación básica: avanzar al siguiente punto y coma
+            linea = t.lineno
+            valor = t.value if isinstance(t.value, str) else str(t.type)
+
+            # Deduplicar: solo un error por línea
+            ya_reportada = any(
+                f'linea {linea}' in e for e in self.errores
+            )
+            if not ya_reportada:
+                msg = (f"  \U0001f6a8 Error sintactico en la linea {linea}: "
+                       f"token inesperado '{valor}'. "
+                       f"Revisa la sintaxis de esa instruccion, cuadro.")
+                self.errores.append(msg)
+                print(msg)
+            # Recuperación: avanzar al siguiente punto y coma
             self.errok()
         else:
-            msg = "  🚨 Barro, cuadro... el programa terminó de forma inesperada."
-            self.errores.append(msg)
-            print(msg)
+            msg = "  Barro, cuadro... el programa termino de forma inesperada."
+            if msg not in self.errores:
+                self.errores.append(msg)
+                print(msg)
+

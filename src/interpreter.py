@@ -14,11 +14,6 @@
 #  Esto es más simple que generar bytecode o ensamblador,
 #  y es perfecto para un compilador académico como este.
 #
-#  ¿POR QUÉ NO COMPILAR A CÓDIGO MÁQUINA?
-#  Porque el objetivo es académico: queremos entender cómo
-#  funciona un compilador, no hacer optimizaciones de bajo nivel.
-#  Un intérprete de árbol es equivalente funcionalmente.
-#
 #  Flujo:
 #    AST validado + TablaEVainas → EjecutorCosteño → Resultados
 # =============================================================
@@ -41,15 +36,15 @@ class EjecutorCosteño:
     Nombre costeño: porque ejecuta con sabor y sin chicharrones.
     """
 
-    def __init__(self, tabla: TablaEVainas, modo_arrebatao=False):
+    def __init__(self, tabla: TablaEVainas, fn_input=None):
         """
         Args:
-            tabla          (TablaEVainas): tabla de símbolos del análisis semántico
-            modo_arrebatao (bool):         si True, imprime debug detallado
+            tabla (TablaEVainas): tabla de símbolos del análisis semántico
+            fn_input (callable): función opcional para solicitar entrada de datos
         """
-        self.tabla          = tabla
-        self.modo_arrebatao = modo_arrebatao  # Modo debug verboso costeño
-        self.errores        = []
+        self.tabla     = tabla
+        self.errores   = []
+        self.fn_input  = fn_input or input
 
     # ----------------------------------------------------------
     #  MÉTODO PRINCIPAL: ejecutar
@@ -108,11 +103,9 @@ class EjecutorCosteño:
     def _exec_declaracion(self, nodo):
         """
         La declaración ya fue procesada por el semántico.
-        Aquí solo registramos en modo arrebatao.
+        Aquí es un no-op (nada que hacer en ejecución).
         """
-        if self.modo_arrebatao:
-            print(f"  🔍 [Arrebatao] Declarando '{nodo.nombre}' "
-                  f"como {nodo.tipo} — chévere.")
+        pass
 
     # ----------------------------------------------------------
     #  EJECUTAR ASIGNACIÓN
@@ -130,43 +123,51 @@ class EjecutorCosteño:
 
         self.tabla.asignar(nodo.nombre, valor)
 
-        if self.modo_arrebatao:
-            print(f"  🔍 [Arrebatao] Asignando {nodo.nombre} = {valor} ({tipo})")
-
     # ----------------------------------------------------------
     #  EJECUTAR CAPTURA
     # ----------------------------------------------------------
     def _exec_captura(self, nodo):
         """
         Solicita al usuario que ingrese un valor por consola.
-        Convierte el input al tipo esperado.
+        Convierte el input al tipo esperado de la VARIABLE (no del Captura).
         """
-        tipo = nodo.tipo
-        prompt = f"  📥 Ingresa un valor {tipo} para '{nodo.variable}': "
+        tipo_variable = self.tabla.obtener_tipo(nodo.variable) or nodo.tipo
+        prompt = f"  📥 Ingresa {nodo.variable} ({tipo_variable}): "
 
         try:
-            entrada = input(prompt)
+            entrada = self.fn_input(prompt)
 
-            # Convertir según el tipo esperado
-            if tipo == 'Entero':
-                valor = int(entrada)
-            elif tipo == 'Real':
+            # Convertir según el tipo de la variable
+            if tipo_variable == 'Entero':
+                try:
+                    valor = int(entrada)
+                except ValueError:
+                    # Si falla como entero, intentar float y truncar
+                    try:
+                        valor = int(float(entrada))
+                    except ValueError:
+                        # Si es texto, guardarlo tal cual (el usuario ingresó texto)
+                        valor = entrada
+            elif tipo_variable == 'Real':
                 valor = float(entrada)
-            elif tipo == 'Logico':
+            elif tipo_variable == 'Logico':
                 valor = entrada.lower() in ('verdadero', 'true', '1', 'si', 'sí')
-            else:  # Texto
+            else:  # Texto o desconocido
                 valor = entrada
 
             self.tabla.asignar(nodo.variable, valor)
 
-            if self.modo_arrebatao:
-                print(f"  🔍 [Arrebatao] Capturado '{nodo.variable}' = {valor}")
-
         except ValueError:
             msg = (f"  🚨 Barro en captura de '{nodo.variable}': "
-                   f"eso no es un {tipo}, cuadro.")
+                   f"eso no es un {tipo_variable}, cuadro.")
             self.errores.append(msg)
             print(msg)
+        except EOFError:
+            # En modo API (sin stdin real), usar valor por defecto
+            valor = 0 if tipo_variable == 'Entero' else (
+                    0.0 if tipo_variable == 'Real' else (
+                    False if tipo_variable == 'Logico' else ''))
+            self.tabla.asignar(nodo.variable, valor)
 
     # ----------------------------------------------------------
     #  EJECUTAR MENSAJE (salida)
@@ -255,10 +256,6 @@ class EjecutorCosteño:
         Lee el valor actual de una variable desde la tabla de símbolos.
         """
         valor = self.tabla.obtener_valor(nodo.nombre)
-        if valor is None:
-            # Puede ser None legítimamente (no asignada aún)
-            if self.modo_arrebatao:
-                print(f"  ⚠️  [Arrebatao] '{nodo.nombre}' no tiene valor aún.")
         return valor
 
     # ----------------------------------------------------------
@@ -273,6 +270,11 @@ class EjecutorCosteño:
             return None
         try:
             if tipo_destino == 'Entero':
+                if isinstance(valor, str):
+                    try:
+                        return int(valor)
+                    except ValueError:
+                        return int(float(valor))
                 return int(valor)
             elif tipo_destino == 'Real':
                 return float(valor)

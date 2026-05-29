@@ -1,227 +1,167 @@
-# 🌊 Compilador Costeñol
+# 🌊 Compilador Costeñol — Guía de Sustentación del Malecón
 
-> *"Bacano, cuadro. El compilador del Malecón."*
+> *"¡Ajá, cuadro! Bienvenidos al compilador del Malecón. Sin chicharrones y con toda la sabrosura de Barranquilla."*
 
-Compilador académico inspirado en la jerga caribeña colombiana (Barranquilla).
-Desarrollado en **Python** con **SLY** para la asignatura de Compiladores.
+Este proyecto es un **Compilador e Intérprete Académico** diseñado para el lenguaje **Costeñol**, un dialecto inspirado en la jerga costeña del Caribe colombiano. Ha sido construido utilizando **Python** y la biblioteca **SLY (Sly Lex Yacc)**.
 
----
-
-## 🚀 Inicio Rápido
-
-### 1. Clonar el repositorio
-
-```bash
-git clone https://github.com/IngMiller07/COSTE-OL.git
-cd COSTE-OL
-```
-
-### 2. Instalar dependencias
-
-```bash
-py -m pip install sly colorama
-```
-
-> **Nota:** `tkinter` ya viene incluido con Python — no necesitas instalarlo.
-
-### 3. Abrir la IDE de escritorio
-
-```bash
-py -X utf8 ide_desktop.py
-```
-
-¡Listo! Se abre la ventana del IDE. Escribe código Costeñol y presiona **▶ Compilar y Ejecutar** o `Ctrl + Enter`.
+Esta guía está redactada con el rigor teórico necesario para la sustentación ante el jurado/docente, junto con la correspondencia de términos en nuestro dialecto.
 
 ---
 
-## 🖥️ IDE de Escritorio
+## 🏛️ 1. Arquitectura y Fases del Compilador
 
-La IDE tiene:
+El compilador sigue una arquitectura clásica de **compilación de una sola pasada con ejecución directa sobre el Árbol de Sintaxis Abstracta (Tree-Walking Interpreter)**.
 
-| Sección | Función |
-|---------|---------|
-| **Panel izquierdo** | Ejemplos precargados — clic para abrir |
-| **Editor** | Escribe tu código `.cos` con syntax highlighting |
-| **Fases** | Indicadores verdes/rojos de Lexer, Parser, Semántica y Ejecutor |
-| **💬 Consola** | Salida del programa y errores costeños |
-| **📋 Tabla e' Vainas** | Variables con nombre, tipo, valor y línea |
-| **🔤 Tokens** | Todos los tokens del Lexer del Malecón |
-| **Modo Arrebatao 🔥** | Debug completo y verboso |
+```mermaid
+graph TD
+    A[Código Fuente .cos] --> B[Fase 0: Preprocesador]
+    B --> C[Fase 1: Lexer del Malecón]
+    C -->|Flujo de Tokens| D[Fase 2: Parser Bacano]
+    D -->|Construye el AST| E[Fase 3: Analizador Sabroso]
+    E <-->|Lee/Escribe| F[Tabla e' Vainas Symbol Table]
+    E -->|AST Validado| G[Fase 4: Ejecutor Costeño]
+    G <-->|Interactúa / Input| H[IDE Escritorio o Consola]
+```
 
-**Atajos de teclado:**
-- `Ctrl + Enter` → Compilar y ejecutar
-- `Ctrl + Z` / `Ctrl + Y` → Deshacer / Rehacer
+### 📋 Cuadro de Equivalencias Técnicas
+| Término Académico | Nombre Costeño | Ubicación de Código | Función Principal |
+| :--- | :--- | :--- | :--- |
+| **Preprocesamiento** | *Fase Cero* | `src/compiler_api.py` | Normaliza el código (comillas) e interpreta plantillas. |
+| **Analizador Léxico** | *Lexer del Malecón* | `src/lexer.py` | Convierte la cadena de caracteres en un flujo de tokens. |
+| **Analizador Sintáctico** | *Parser Bacano* | `src/parser.py` | Valida la gramática y estructura el AST jerárquico. |
+| **Tabla de Símbolos** | *Tabla e' Vainas* | `src/symbol_table.py` | Almacena y gestiona variables, sus tipos y valores. |
+| **Analizador Semántico** | *Analizador Sabroso* | `src/semantic.py` | Verifica la coherencia de tipos y declaraciones. |
+| **Intérprete** | *Ejecutor Costeño* | `src/interpreter.py` | Ejecuta las instrucciones evaluando los nodos del AST. |
 
 ---
 
-## 📝 Sintaxis del Lenguaje Costeñol
+## ⚙️ 2. Detalles Técnicos de las Fases
 
-### Tipos de dato
-```
-Entero   → Números enteros:   num1 Entero;
-Texto    → Cadenas de texto:  nombre Texto;
-Real     → Decimales:         pi Real;
-Logico   → Booleanos:         activo Logico;
-```
+### 🔹 Fase 0: Preprocesador (`src/compiler_api.py`)
+Antes de iniciar el análisis léxico, el código fuente pasa por una fase de normalización estética:
+1. **Normalización de Comillas**: Convierte comillas tipográficas curvas (`“`, `”`) a comillas rectas (`"`). Evita que procesadores de texto (como Word o Teams) dañen la compilación.
+2. **Traducción de Plantillas**: Traduce expresiones de interpolación especial como `Mensaje.Texto(El resultado es:"sum");` a una concatenación explícita válida: `Mensaje.Texto("El resultado es:" + sum);`. Esto evita ambigüedades en el Parser.
 
-### Declaración
-```
+### 🔤 Fase 1: Analizador Léxico (`src/lexer.py`)
+Implementado con `sly.Lexer`. Define las expresiones regulares para los terminales del lenguaje:
+* **Palabras Clave**: `Entero`, `Texto`, `Real`, `Logico` (tipos), `Captura`, `Mensaje`.
+* **Booleanos**: `verdadero`, `falso`.
+* **Delimitadores y Operadores**: `+`, `-`, `*`, `/`, `^`, `=`, `;`, `.`, `(`, `)`.
+* **Ignorados**: Los comentarios con `//` y los espacios en blanco se descartan automáticamente para no ensuciar el flujo de tokens.
+
+### 🌳 Fase 2: Analizador Sintáctico y AST (`src/parser.py`)
+Utiliza algoritmos **LALR(1)** provistos por `sly.Parser`.
+* **Precedencia de Operadores**: Define la jerarquía matemática y lógica (desde `^` y unarios en la parte superior hasta operadores lógicos `||`, `&&` y comparadores en la inferior).
+* **Mecanismo de Recuperación de Errores**: Implementa `errok()` para reanudar el análisis tras detectar una inconsistencia (avanzando hasta el siguiente `;`).
+* **Deduplicación de Errores**: Evita propagaciones masivas limitando el reporte a **un único mensaje de error por línea**.
+* **Construcción del AST**: Genera una estructura jerárquica con clases definidas en `src/ast_nodes.py` (ej. `NodoAsignacion`, `NodoOperacion`, `NodoMensaje`).
+
+### 🧠 Fase 3: Analizador Semántico (`src/semantic.py`)
+Esta fase valida el significado del código y aplica un enfoque de **semántica flexible** diseñado para la usabilidad académica:
+1. **Declaración Implícita**: Si el compilador detecta una asignación o captura sobre una variable no declarada previamente, la declara automáticamente de forma dinámica y emite una advertencia (`⚠️ [Advertencia]`), en lugar de abortar con un error fatal.
+2. **Compatibilidad Laxa de Tipos**: Las incoherencias de tipos (como asignar una entrada de `Texto` a una variable de tipo `Entero`) no detienen la ejecución. Se emite una advertencia semántica y el compilador delega al intérprete la tarea de convertir el valor en tiempo de ejecución.
+
+### ▶️ Fase 4: Ejecutor / Intérprete (`src/interpreter.py`)
+Es un **Intérprete de Árbol (Tree-Walking)**.
+* Evalúa recursivamente cada nodo del AST.
+* **Manejo de Capturas Interactivas**: Acepta un callback `fn_input` inyectable. En la consola CLI corre con `input()`, pero en la aplicación de escritorio se vincula con un cuadro de diálogo modal de Tkinter (`simpledialog.askstring`) para interactuar directamente desde la ventana gráfica.
+* **Conversión Dinámica de Tipos**: Al momento de la asignación, convierte los tipos de datos al formato correspondiente de la variable (por ejemplo, convierte la cadena `"10"` a un entero `10` al guardarse en una variable de tipo `Entero`).
+
+---
+
+## 🧪 3. Análisis Paso a Paso del Caso de Prueba del Docente
+
+El docente evaluará el compilador utilizando el siguiente bloque de código:
+
+```text
 num1 Entero;
-nombre Texto;
+num2 Entero;
+num1=Captura.Texto();
+num2=Captura.Entero();
+sum=num1+num2);
+Mensaje.Texto(El resultado es:”sum”);
 ```
 
-### Asignación
-```
-num1 = 42;
-nombre = "Alejandra";
-pi = 3.1416;
-activo = verdadero;
-suma = num1 + num2;
+Así es como reacciona internamente el compilador al presionar **Compilar y Ejecutar**:
+
+```mermaid
+chronological
+    title Línea por Línea - Ejecución del Caso de Prueba
+    Líneas 1 y 2 : Declaración de variables num1 y num2 como Entero.
+    Línea 3 : Captura de Texto sobre variable Entero. Semántico emite Advertencia de tipo.
+    Línea 4 : Captura de Entero sobre variable Entero. Semántica correcta.
+    Línea 5 : Parser detecta paréntesis de cierre extra. Reporta Error Sintáctico y recupera. Semántico declara sum implícitamente.
+    Línea 6 : Preprocesador normaliza comillas y traduce plantilla a concatenación de cadenas.
 ```
 
-### Captura (input del usuario)
-```
-nombre = Captura.Texto();
-num1   = Captura.Entero();
-pi     = Captura.Real();
-activo = Captura.Logico();
-```
+### Explicación de las Líneas Críticas:
 
-### Salida
-```
-Mensaje.Texto("Hola cuadro");
-Mensaje.Texto(nombre);
-```
+1. **`num1 Entero;` y `num2 Entero;` (Líneas 1 y 2)**
+   * El lexer genera los tokens `[ID, ENTERO, PUNTO_COMA]`.
+   * El parser los reduce a `NodoDeclaracion` para cada variable.
+   * El semántico los registra en la **Tabla e' Vainas** con tipo `Entero` y valor inicial `None`.
 
-### Operadores
-```
-+  -  *  /  ^          ← Aritméticos
-== != > < >= <=        ← Comparación
-&& ||                  ← Lógicos
-```
+2. **`num1=Captura.Texto();` (Línea 3)**
+   * **Semántica Flexible**: `num1` fue declarada como `Entero`, pero se le asigna una captura de `Texto`. El analizador semántico detecta el mismatch de tipos y genera una advertencia:
+     > `⚠️ 'num1' es Entero pero Captura.Texto() captura un Texto (línea 3). Costeñol intentará convertir, cuadro.`
+   * **Ejecución**: El motor solicita el dato. Si el usuario ingresa `"10"`, el intérprete lo recibe como texto y lo convierte internamente a `int` (`10`) antes de escribirlo en la Tabla de Símbolos, manteniendo la coherencia de tipos.
 
-### Comentarios
-```
-// Esto es un comentario, se ignora al compilar
-```
+3. **`sum=num1+num2);` (Línea 5 — Con error)**
+   * **El Error Sintáctico**: Contiene un paréntesis de cierre `)` huérfano.
+   * **Recuperación**: El parser detecta que la estructura no corresponde a una asignación válida, lanza un error amigable, y gracias a `errok()` ignora el token inesperado y se desplaza al siguiente punto y coma para continuar el programa sin colapsar.
+   * **Error Reportado**:
+     > `🚨 Error sintactico en la linea 5: token inesperado ')'. Revisa la sintaxis de esa instruccion, cuadro.`
+   * **Declaración Implícita**: La variable `sum` no fue declarada en las primeras líneas. El analizador semántico la detecta y la registra automáticamente en la tabla de símbolos como tipo `Entero` (deducido del resultado de sumar dos enteros) lanzando su advertencia:
+     > `⚠️ 'sum' no fue declarada (línea 5). Costeñol la declaró automáticamente como Entero.`
 
----
-
-## 🏗️ Estructura del Proyecto
-
-```
-COSTE-OL/
-├── ide_desktop.py       ← ⭐ PUNTO DE ENTRADA PRINCIPAL (IDE)
-├── costeñol.py          ← Compilador por línea de comandos
-├── requirements.txt     ← Dependencias
-│
-├── src/
-│   ├── lexer.py         ← Lexer del Malecón (tokenización)
-│   ├── parser.py        ← Parser Bacano (sintaxis + AST)
-│   ├── ast_nodes.py     ← Nodos del Árbol Sintáctico
-│   ├── symbol_table.py  ← Tabla e' Vainas (variables)
-│   ├── semantic.py      ← Analizador Sabroso (semántica)
-│   ├── interpreter.py   ← Ejecutor Costeño (intérprete)
-│   └── compiler_api.py  ← API programática del compilador
-│
-├── examples/
-│   ├── hola_cuadro.cos  ← Hola Mundo costeño
-│   ├── calculadora.cos  ← Operaciones aritméticas
-│   └── variables.cos    ← Todos los tipos + captura
-│
-└── tests/
-    ├── test_lexer.py    ← Tests del Lexer (16 pruebas)
-    └── test_parser.py   ← Tests del Parser y Semántica (12 pruebas)
-```
+4. **`Mensaje.Texto(El resultado es:”sum”);` (Línea 6)**
+   * **Fase 0**: El preprocesador identifica las comillas tipográficas `”` y el formato de plantilla de salida.
+   * Transforma el nodo a: `Mensaje.Texto("El resultado es:" + sum);`.
+   * El parser procesa este nuevo código sin conflictos de ambigüedad.
+   * **Ejecución**: Evalúa la concatenación `"El resultado es: "` con el valor numérico de `sum` (ej. `15`), generando e imprimiendo la cadena `"El resultado es: 15"`.
 
 ---
 
-## 💻 Uso por Línea de Comandos (alternativo)
+## 🚀 4. Guía de Inicio Rápido y Demostración
 
+### 📥 1. Instalación de Dependencias
+Asegúrate de contar con Python 3.8+ instalado y ejecuta:
 ```bash
-# Compilar un archivo
-py -X utf8 costeñol.py examples/hola_cuadro.cos
-
-# Modo debug completo
-py -X utf8 costeñol.py examples/calculadora.cos --arrebatao
-
-# Ayuda
-py -X utf8 costeñol.py --ayuda
+pip install sly colorama
 ```
 
----
-
-## 🧪 Ejecutar Tests
-
+### 🖥️ 2. Ejecutar la IDE de Escritorio (Tkinter)
+Para iniciar la interfaz de usuario nativa:
 ```bash
-# Tests del Lexer (16 pruebas)
-py -X utf8 tests/test_lexer.py
-
-# Tests del Parser y Semántica (12 pruebas)
-py -X utf8 tests/test_parser.py
+py ide_desktop.py
 ```
+*   **Nota**: En Windows, si tienes problemas con caracteres especiales en el editor, ejecuta la IDE forzando UTF-8: `py -X utf8 ide_desktop.py`.
 
----
-
-## 🏛️ Fases del Compilador
-
-| # | Fase | Módulo | Qué hace |
-|---|------|--------|----------|
-| 1 | **Lexer del Malecón** | `lexer.py` | Convierte código → tokens |
-| 2 | **Parser Bacano** | `parser.py` | Verifica gramática → construye AST |
-| 3 | **Tabla e' Vainas** | `symbol_table.py` | Almacena variables |
-| 3 | **Analizador Sabroso** | `semantic.py` | Valida tipos y variables |
-| 4 | **Ejecutor Costeño** | `interpreter.py` | Ejecuta el AST |
-
----
-
-## 📦 Exportar para Compañeros
-
-Para que tus compañeros usen el proyecto en su PC:
-
-### Opción A — Clonar desde GitHub (recomendado)
-
-```bash
-git clone https://github.com/IngMiller07/COSTE-OL.git
-cd COSTE-OL
-py -m pip install sly colorama
-py -X utf8 ide_desktop.py
-```
-
-### Opción B — Descargar ZIP desde GitHub
-
-1. Ir a `https://github.com/IngMiller07/COSTE-OL`
-2. Clic en **Code → Download ZIP**
-3. Descomprimir la carpeta
-4. Abrir terminal en la carpeta descomprimida
-5. Ejecutar:
+### 🌐 3. Ejecutar la IDE Web (Servidor Flask)
+Si deseas presentar la IDE en un navegador web (interfaz premium responsiva):
+1. Instala Flask: `pip install flask`
+2. Ejecuta el servidor:
    ```bash
-   py -m pip install sly colorama
-   py -X utf8 ide_desktop.py
+   py ide_server.py
    ```
+3. Abre tu navegador en: **`http://localhost:5000`**
 
-### Requisitos del sistema
-
-- Python 3.8 o superior (recomendado 3.10+)
-- Windows, macOS o Linux
-- Verificar Python instalado: `py --version`
-- Si no tienen `py`, usar `python` o `python3`
-
----
-
-## 🌴 Glosario Costeño
-
-| Término | Significado técnico |
-|---------|---------------------|
-| Chicharrón | Error de compilación |
-| Bacano | Éxito / Correcto |
-| Tabla e' Vainas | Tabla de símbolos |
-| Modo Arrebatao | Modo debug verboso |
-| Lexer del Malecón | Analizador léxico |
-| Parser Bacano | Analizador sintáctico |
-| Analizador Sabroso | Analizador semántico |
-| Ejecutor Costeño | Intérprete de árbol |
+### 🧪 4. Ejecutar el Script de Sustentación Directo
+Si quieres hacer una demostración limpia por terminal donde el compilador procesa consecutivamente el código con errores del docente y luego su variante corregida (inyectando respuestas automáticas):
+```bash
+py test_docente.py
+```
 
 ---
 
-> *"Sin chicharrones y con calidad. Así se compila en el Malecón."* 🌊
+## 🌴 5. Glosario de Mensajes Costeños en Compilación
+El compilador está diseñado para dar feedback técnico utilizando localismos amigables del Caribe:
+
+*   `Barro, cuadro... el programa terminó de forma inesperada`: Error fatal al final del archivo (EOF abrupto).
+*   `Cule chicharrón sintáctico...`: Estructura gramatical no válida.
+*   `Chicharrón en el Analizador Sabroso...`: Error de análisis semántico.
+*   `Chicharrón matemático: no puedes dividir por cero, cuadro`: Excepción de división por cero atrapada en el intérprete.
+*   `¡Bacano! El código corrió sin chicharrones`: Ejecución 100% exitosa del script.
+
+---
+*Desarrollado con fines académicos y de divulgación sobre la construcción de compiladores.* 🌊

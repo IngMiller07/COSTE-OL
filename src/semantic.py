@@ -81,7 +81,6 @@ class AnalizadorSabroso:
     # ----------------------------------------------------------
     #  DISPATCHER: _visitar
     #  Redirige al método correcto según el tipo de nodo.
-    #  Esto es el patrón Visitor simplificado con isinstance().
     # ----------------------------------------------------------
     def _visitar(self, nodo):
         """
@@ -142,12 +141,19 @@ class AnalizadorSabroso:
         Verifica que:
         1. La variable destino haya sido declarada.
         2. El tipo de la expresión sea compatible con el tipo de la variable.
+
+        Si la variable no fue declarada, la declara automáticamente como
+        el tipo inferido (comportamiento flexible para el docente).
         """
-        # 1. Verificar que la variable existe
+        # 1. Verificar que la variable existe; si no, declararla implícitamente
         if not self.tabla.existe(nodo.nombre):
-            msg = (f"  🚨 Eche, '{nodo.nombre}' no fue declarada, cuadro "
-                   f"(línea {nodo.linea}). Esa vaina no existe en la Tabla e' Vainas.")
-            self.errores.append(msg)
+            # Inferir tipo de la expresión para declaración implícita
+            tipo_inferido = self._visitar(nodo.expresion)
+            tipo_a_usar = tipo_inferido if tipo_inferido else 'Texto'
+            self.tabla.declarar(nodo.nombre, tipo_a_usar, nodo.linea)
+            msg = (f"  ⚠️  '{nodo.nombre}' no fue declarada (línea {nodo.linea}). "
+                   f"Costeñol la declaró automáticamente como {tipo_a_usar}.")
+            self.advertencias.append(msg)
             print(msg)
             return
 
@@ -158,11 +164,11 @@ class AnalizadorSabroso:
         # 3. Verificar compatibilidad de tipos
         if tipo_expresion is not None and tipo_variable is not None:
             if not self._tipos_compatibles(tipo_variable, tipo_expresion):
-                msg = (f"  🚨 Barro de tipos en la línea {nodo.linea}: "
+                msg = (f"  ⚠️  Advertencia de tipos en la línea {nodo.linea}: "
                        f"'{nodo.nombre}' es {tipo_variable} "
                        f"pero le estás metiendo un {tipo_expresion}. "
-                       f"Eso no cuadra, cuadro.")
-                self.errores.append(msg)
+                       f"Costeñol intentará convertir, cuadro.")
+                self.advertencias.append(msg)
                 print(msg)
 
     # ----------------------------------------------------------
@@ -172,21 +178,26 @@ class AnalizadorSabroso:
         """
         Verifica que la variable destino exista y que el tipo
         de captura sea compatible con el tipo de la variable.
+
+        Si la variable no fue declarada, se declara con el tipo de la captura.
+        Si hay mismatch de tipos, se emite advertencia (no error fatal).
         """
         if not self.tabla.existe(nodo.variable):
-            msg = (f"  🚨 Eche, '{nodo.variable}' no fue declarada "
-                   f"(línea {nodo.linea}). Declárala primero, cuadro.")
-            self.errores.append(msg)
+            # Declarar implícitamente con el tipo de la captura
+            self.tabla.declarar(nodo.variable, nodo.tipo, nodo.linea)
+            msg = (f"  ⚠️  '{nodo.variable}' no fue declarada (línea {nodo.linea}). "
+                   f"Costeñol la declaró automáticamente como {nodo.tipo}.")
+            self.advertencias.append(msg)
             print(msg)
             return
 
         tipo_variable = self.tabla.obtener_tipo(nodo.variable)
         if not self._tipos_compatibles(tipo_variable, nodo.tipo):
-            msg = (f"  🚨 Chicharrón de tipos en la línea {nodo.linea}: "
-                   f"'{nodo.variable}' es {tipo_variable} "
-                   f"pero Captura.{nodo.tipo}() mete un {nodo.tipo}. "
-                   f"Eso no pega, cuadro.")
-            self.errores.append(msg)
+            # Advertencia pero no error fatal — el ejecutor intentará convertir
+            msg = (f"  ⚠️  '{nodo.variable}' es {tipo_variable} "
+                   f"pero Captura.{nodo.tipo}() captura un {nodo.tipo} "
+                   f"(línea {nodo.linea}). Costeñol intentará convertir, cuadro.")
+            self.advertencias.append(msg)
             print(msg)
 
     # ----------------------------------------------------------
@@ -273,12 +284,18 @@ class AnalizadorSabroso:
           - Mismo tipo         → siempre compatible
           - Entero ← Real     → compatible (por truncamiento)
           - Real   ← Entero   → compatible (promoción)
-          - Texto  ← Entero   → incompatible
-          - Logico ← Entero   → incompatible
+          - Texto  ← cualquier → compatible (conversión a string)
+          - Logico ← Entero   → compatible (0=falso, otro=verdadero)
         """
         if tipo_destino == tipo_origen:
             return True
         # Compatibilidad entre numéricos
         if tipo_destino in ('Entero', 'Real') and tipo_origen in ('Entero', 'Real'):
+            return True
+        # Texto acepta cualquier cosa (conversión implícita)
+        if tipo_destino == 'Texto':
+            return True
+        # Entero/Real desde Texto (conversión posible en runtime)
+        if tipo_origen == 'Texto' and tipo_destino in ('Entero', 'Real'):
             return True
         return False
